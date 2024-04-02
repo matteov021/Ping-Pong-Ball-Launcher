@@ -27,18 +27,23 @@ DUTY_CYCLE_DOWN_BTN = 15
 START_BTN = 4
 
 speed = 0.00075  # Initial speed
-duty_cycle = 40  # Initial duty cycle
+duty_cycle = 15  # Initial duty cycle
 
+# Setup MediaPipe Face Detection
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
-face_detection = mp_face_detection.FaceDetection(min_detection_confidence = 0.5)
 
+# Constants and GPIO setup code remains unchanged
+
+# Initialize PiCamera2
 piCam = Picamera2()
 piCam.preview_configuration.main.size=(1280,720)
 piCam.preview_configuration.main.format="RGB888"
 piCam.preview_configuration.align()
 piCam.configure("preview")
 piCam.start()
+
+face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup([DIR, STEP, PWM_PIN, PWM_PIN2, SOLENOID_PIN], GPIO.OUT)
@@ -50,27 +55,24 @@ dc_motor_pwm2 = GPIO.PWM(PWM_PIN2, 490)  # PWM frequency 1000 Hz
 dc_motor_pwm2.start(0)                   # Start with 0% duty cycle
 
 def get_face_position():
-    frame = piCam.capture_array()                   # Capture a frame from the PiCamera
-    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert the image to RGB
-    results = face_detection.process(image)         # Process the image with MediaPipe Face Detection
-    
+    frame = piCam.capture_array()
+    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_detection.process(rgb_image)
     if results.detections:
         for detection in results.detections:
-            bbox_coords = detection.location_data.relative_bounding_box
-            image_height, image_width, _ = frame.shape
-            xmin = int(bbox_coords.xmin * image_width)
-            ymin = int(bbox_coords.ymin * image_height)
-            xmax = int((bbox_coords.xmin + bbox_coords.width) * image_width)
-            ymax = int((bbox_coords.ymin + bbox_coords.height) * image_height)
-            return ((xmin + xmax) / 2)  # Return the center of the bounding box
-    return None
-
+            bboxC = detection.location_data.relative_bounding_box
+            ih, iw, _ = frame.shape
+            x, y = int(bboxC.xmin * iw), int(bboxC.ymin * ih)
+            w, h = int(bboxC.width * iw), int(bboxC.height * ih)
+            return x + w // 2
+    else:
+        return None
 
 def map_value_to_degrees(value):
     return (value - 600) / ((1200 - 0) / (MAX_DEGREES - (-MAX_DEGREES))) # Maps value from 0-1200 range to -90 to +90 degrees
 
 def rotate_stepper_motor(degrees, direction, speed):
-    steps = int(abs(degrees) / DEGREES_PER_STEP)            # Calculate the number of steps
+    steps = int(abs(degrees) / DEGREES_PER_STEP)  # Calculate the number of steps
     GPIO.output(DIR, CW if direction == 'cw' else CCW)
     
     for x in range(steps):
@@ -128,16 +130,24 @@ def return_to_origin_if_exit():
 
 def run_program():
     global speed, duty_cycle
-    processed_data = 0  # Initialize counter for detected faces
+    face_detected_count = 0  # Initialize counter for detected faces
 
-    while processed_data < 30:  # Keep running until 30 faces have been processed
-        value = get_face_position()
+    while face_detected_count < 30:  # Keep running until 30 faces have been processed
+
         if not GPIO.input(START_BTN):
             break;
-
+        
         if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop if 'q' is pressed
             break
-        
+
+        if random.choice([True, False]):
+            value = get_face_position()
+            print("Processing face position...")
+        else:
+            # value = get_hand_position()
+            print("Processing hand position...")
+
+
         if value is not None:
             degrees = map_value_to_degrees(value)
             direction = 'ccw' if degrees > 0 else 'cw'
@@ -150,9 +160,9 @@ def run_program():
             print(f"Rotating to {degrees} degrees {direction} with speed {speed:.4f}")
             rotate_stepper_motor(degrees, direction, speed)
             time.sleep(1)
-            pulse_solenoid()                    # Pulse Solenoid
-            dc_motor_pwm.ChangeDutyCycle(0)     # Stop DC motor
-            dc_motor_pwm2.ChangeDutyCycle(0)    # Stop DC motor
+            pulse_solenoid()  # Pulse Solenoid
+            dc_motor_pwm.ChangeDutyCycle(0)  # Stop DC motor
+            dc_motor_pwm2.ChangeDutyCycle(0)  # Stop DC motor
             time.sleep(2)
 
             # Return To Origin
@@ -162,7 +172,7 @@ def run_program():
             print("Origin Reached")
             time.sleep(2)
 
-            processed_data += 1  # Increment the face detected counter
+            face_detected_count += 1  # Increment the face detected counter
 
         else:
             # If no face is detected, you might want to add a short delay here

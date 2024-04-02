@@ -33,6 +33,10 @@ mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
 face_detection = mp_face_detection.FaceDetection(min_detection_confidence = 0.5)
 
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+hands = mp_hands.Hands(min_detection_confidence = 0.5,  min_tracking_confidence = 0.5)
+
 piCam = Picamera2()
 piCam.preview_configuration.main.size=(1280,720)
 piCam.preview_configuration.main.format="RGB888"
@@ -48,6 +52,22 @@ dc_motor_pwm = GPIO.PWM(PWM_PIN, 490)    # PWM frequency 1000 Hz
 dc_motor_pwm.start(0)                    # Start with 0% duty cycle
 dc_motor_pwm2 = GPIO.PWM(PWM_PIN2, 490)  # PWM frequency 1000 Hz
 dc_motor_pwm2.start(0)                   # Start with 0% duty cycle
+
+def get_hand_position():
+    frame = piCam.capture_array()
+    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = hands.process(image)
+
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            x, y = 0, 0
+            for landmark in hand_landmarks.landmark:
+                x += landmark.x
+                y += landmark.y
+            x /= len(hand_landmarks.landmark)
+            y /= len(hand_landmarks.landmark)
+            return (x * image.shape[1]) / 2  # Simplified center calculation
+    return None
 
 def get_face_position():
     frame = piCam.capture_array()                   # Capture a frame from the PiCamera
@@ -131,13 +151,17 @@ def run_program():
     processed_data = 0  # Initialize counter for detected faces
 
     while processed_data < 30:  # Keep running until 30 faces have been processed
-        value = get_face_position()
         if not GPIO.input(START_BTN):
             break;
+        if random.choice([True, False]):  # 50/50 chance
+            value = get_face_position()
+            print("Processing face position...")
+        else:
+            value = get_hand_position()
+            print("Processing hand position...")
 
         if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop if 'q' is pressed
             break
-        
         if value is not None:
             degrees = map_value_to_degrees(value)
             direction = 'ccw' if degrees > 0 else 'cw'
