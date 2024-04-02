@@ -51,8 +51,6 @@ GPIO.setup([SPEED_UP_BTN, SPEED_DOWN_BTN, DUTY_CYCLE_UP_BTN, DUTY_CYCLE_DOWN_BTN
 
 dc_motor_pwm = GPIO.PWM(PWM_PIN, 490)    # PWM frequency 1000 Hz
 dc_motor_pwm.start(0)                    # Start with 0% duty cycle
-dc_motor_pwm2 = GPIO.PWM(PWM_PIN2, 490)  # PWM frequency 1000 Hz
-dc_motor_pwm2.start(0)                   # Start with 0% duty cycle
 
 def get_face_position():
     frame = piCam.capture_array()
@@ -84,7 +82,6 @@ def rotate_stepper_motor(degrees, direction, speed):
 
 def control_dc_motor(duty_cycle):
     dc_motor_pwm.ChangeDutyCycle(duty_cycle)    # Set duty cycle
-    dc_motor_pwm2.ChangeDutyCycle(duty_cycle)    # Set duty cycle
     time.sleep(2)                               # Hold for 2 seconds
 
 def adjust_speed(increase = True):
@@ -162,7 +159,6 @@ def run_program():
             time.sleep(1)
             pulse_solenoid()  # Pulse Solenoid
             dc_motor_pwm.ChangeDutyCycle(0)  # Stop DC motor
-            dc_motor_pwm2.ChangeDutyCycle(0)  # Stop DC motor
             time.sleep(2)
 
             # Return To Origin
@@ -205,6 +201,7 @@ try:
             adjust_duty_cycle(increase = False)
             time.sleep(1)
         if not GPIO.input(START_BTN):
+            time.sleep(5)
             run_program()
             print("Completed 30 cycles of face detection and processing.")
         time.sleep(0.1)
