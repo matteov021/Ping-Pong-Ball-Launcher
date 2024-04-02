@@ -137,13 +137,18 @@ def run_program():
         if cv2.waitKey(1) & 0xFF == ord('q'):  # Break loop if 'q' is pressed
             break
 
-        if random.choice([True, False]):
+        choices = ['face'] * 5 + ['hand'] * 4 + ['random'] * 1
+        action = random.choice(choices)
+
+        if action == 'face':
             value = get_face_position()
             print("Processing face position...")
-        else:
+        elif action == 'hand':
             # value = get_hand_position()
             print("Processing hand position...")
-
+        else:
+            value = random.randint(0, 600)
+            print("Performing a random action...")
 
         if value is not None:
             degrees = map_value_to_degrees(value)
