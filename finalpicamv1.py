@@ -7,7 +7,7 @@ mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
 
 piCam = Picamera2()
-preview_config = piCam.create_preview_configuration(main={"size": (640, 480), "format": "RGB888"})
+preview_config = piCam.create_preview_configuration(main={"size": (1280, 720), "format": "RGB888"})
 piCam.configure(preview_config)
 piCam.start()
 

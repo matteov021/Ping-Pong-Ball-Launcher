@@ -8,7 +8,7 @@ DIR = 13
 STEP = 6
 PWM_PIN = 12
 PWM_PIN2 = 27
-SOLENOID_PIN = 23
+SOLENOID_PIN = 5
 CW = 1
 CCW = 0
 SPR = 3200
@@ -83,12 +83,12 @@ f = open("/home/pi/Desktop/ENEL400/StepMotorBackup.txt", "w")
 try:
     for x in range(6):
         #value = random.randint(0, 600)              # Random value between 0 and 600
-        value = 300
+        value = 600
         degrees = map_value_to_degrees(value)
         direction = 'ccw' if degrees > 0 else 'cw'
         # speed = random.uniform(0.0005, 0.001)
-        speed = 0.0005
-        duty_cycle = random.randint(80, 81)
+        speed = 0.001
+        duty_cycle = random.randint(10, 11)
         
         # Control DC Motor
         print(f"Controlling DC motor with duty cycle: {duty_cycle}%")
@@ -110,7 +110,7 @@ try:
         print(f"Returning to origin from {degrees} degrees {direction} with speed {speed:.4f}\n")
         f.write("0\ncw\n")
         print("Origin Reached")
-        # time.sleep(2)
+        time.sleep(2)
 
 finally:
     f.close()
